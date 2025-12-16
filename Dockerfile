@@ -19,7 +19,7 @@ COPY . .
 RUN cargo build --release
 
 # Now make the runtime container
-FROM debian:bookworm-slim AS runtime
+FROM debian:trixie-slim AS runtime
 
 COPY sparse-checkout.sh .
 
