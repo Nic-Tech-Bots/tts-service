@@ -63,7 +63,7 @@ pub async fn get_tts(
             .stdin(espeak_stdout)
             .args([
                 "-e",
-                &dbg!(aformat!("{}/{voice}/{voice}", astr!(MBROLA_DATA_PATH))),
+                &aformat!("{}/{voice}/{voice}", astr!(MBROLA_DATA_PATH)),
                 "-",
                 "-.wav",
             ])
