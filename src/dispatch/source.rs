@@ -35,10 +35,9 @@ impl songbird::input::Compose for TTSSource {
         request.preferred_format = Some(FixedString::from_static_trunc("opus"));
 
         match crate::get_tts_inner(crate::STATE.get().unwrap(), request).await {
-            Ok((audio, _)) => {
-                let input = Box::new(std::io::Cursor::new(audio));
-                Ok(AudioStream { input, hint: None })
-            }
+            Ok((audio, _)) => Ok(AudioStream {
+                input: Box::new(std::io::Cursor::new(audio)),
+            }),
             Err(err) => Err(AudioStreamError::Fail(ErrWrapper(err).into())),
         }
     }
