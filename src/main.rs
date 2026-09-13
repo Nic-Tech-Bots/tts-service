@@ -113,7 +113,8 @@ async fn get_voices(
     }))
 }
 
-async fn get_translation_languages() -> ResponseResult<Json<Vec<(FixedString, FixedString)>>> {
+async fn get_translation_languages() -> ResponseResult<Json<Vec<(FixedString<u8>, FixedString<u8>)>>>
+{
     let state = STATE.get().unwrap();
     let Some(token) = &state.translation_key else {
         return Ok(Json(Vec::new()));

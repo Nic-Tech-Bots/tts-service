@@ -34,6 +34,8 @@ struct TranslateRequest<'a> {
     text: &'a str,
     target_lang: &'a str,
     preserve_formatting: u8,
+    formality: &'a str,
+    model_type: &'a str,
 }
 
 #[derive(serde::Deserialize)]
@@ -62,6 +64,8 @@ pub async fn run(
         target_lang,
         text: content,
         preserve_formatting: 1,
+        formality: "prefer_less",
+        model_type: "latency_optimized",
     };
 
     let response: TranslateResponse = reqwest
@@ -85,8 +89,9 @@ pub async fn run(
 
 #[derive(serde::Deserialize)]
 struct Voice {
-    pub name: FixedString,
-    pub language: FixedString,
+    pub name: FixedString<u8>,
+    pub lang: FixedString<u8>,
+    pub usable_as_target: bool,
 }
 
 struct VoiceRequest;
@@ -95,8 +100,8 @@ impl serde::Serialize for VoiceRequest {
     where
         S: serde::Serializer,
     {
-        let mut serializer = serializer.serialize_struct("DeeplVoiceRequest", 1)?;
-        serializer.serialize_field("type", "target")?;
+        let mut serializer = serializer.serialize_struct("VoiceRequest", 1)?;
+        serializer.serialize_field("resource", "translate_text")?;
         serializer.end()
     }
 }
@@ -104,9 +109,9 @@ impl serde::Serialize for VoiceRequest {
 pub async fn get_languages(
     reqwest: &reqwest::Client,
     token: &str,
-) -> Result<Vec<(FixedString, FixedString)>> {
+) -> Result<Vec<(FixedString<u8>, FixedString<u8>)>> {
     let languages: Vec<Voice> = reqwest
-        .get("https://api.deepl.com/v2/languages")
+        .get("https://api.deepl.com/v3/languages")
         .query(&VoiceRequest)
         .header("Authorization", auth_header(token))
         .send()
@@ -117,7 +122,8 @@ pub async fn get_languages(
 
     let language_map = languages
         .into_iter()
-        .map(|v| (v.language, v.name))
+        .filter(|v| v.usable_as_target)
+        .map(|v| (v.lang, v.name))
         .collect();
 
     Ok(language_map)
