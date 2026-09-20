@@ -1,4 +1,9 @@
+use std::collections::HashSet;
+
 use songbird::id::{ChannelId, GuildId, UserId};
+
+#[derive(serde::Deserialize, PartialEq, Eq, Hash)]
+pub struct MessageId(nonmax::NonMaxU64);
 
 macro_rules! make_deserializers {
     ($(fn $fn_name:ident($id:ty);)*) => {$(
@@ -23,8 +28,9 @@ pub struct MessageFrame {
 
 #[derive(serde::Deserialize)]
 pub enum IncomingMessage {
-    QueueTTS(crate::GetTTS),
+    QueueTTS(MessageId, crate::GetTTS),
     MoveVC(WSConnectionInfo),
+    DeleteFromQueue(HashSet<MessageId>),
     ClearQueue,
     Leave,
 }

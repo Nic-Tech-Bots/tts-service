@@ -1,9 +1,9 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
-use songbird::id::GuildId;
+use songbird::{id::GuildId, tracks::Track};
 use tokio_tungstenite::tungstenite::{Error as WSError, error::ProtocolError as WSProtocolError};
 
-use crate::dispatch::models::{IncomingMessage, MessageFrame, WSConnectionInfo};
+use crate::dispatch::models::{IncomingMessage, MessageFrame, MessageId, WSConnectionInfo};
 mod models;
 mod source;
 
@@ -46,6 +46,7 @@ async fn recieve_message(ws: &mut axum::extract::ws::WebSocket) -> MessageRespon
 }
 
 pub type CallMap = HashMap<GuildId, songbird::Call>;
+type TrackData = MessageId;
 
 pub async fn ws_task(mut ws: axum::extract::ws::WebSocket) {
     let state = crate::STATE.get().expect("should be set before requests");
@@ -63,13 +64,16 @@ pub async fn ws_task(mut ws: axum::extract::ws::WebSocket) {
         };
 
         match msg.inner {
-            IncomingMessage::QueueTTS(get_tts) => {
+            IncomingMessage::QueueTTS(message_id, get_tts) => {
                 let Some(call) = calls.get_mut(&msg.guild_id) else {
                     continue;
                 };
 
                 let compose = Box::new(source::TTSSource(Some(get_tts)));
-                call.enqueue_input(songbird::input::Input::Lazy(compose))
+                let input = songbird::input::Input::Lazy(compose);
+                let track_data: TrackData = message_id;
+
+                call.enqueue(Track::new_with_data(input, Arc::new(track_data)))
                     .await;
             }
             IncomingMessage::MoveVC(info) => {
@@ -79,8 +83,25 @@ pub async fn ws_task(mut ws: axum::extract::ws::WebSocket) {
 
                 call.connect(ws_connect_info_to_songbird(info, msg.guild_id));
             }
+            IncomingMessage::DeleteFromQueue(message_ids) => {
+                let Some(call) = calls.get(&msg.guild_id) else {
+                    continue;
+                };
+
+                call.queue().modify_queue(|queue| {
+                    queue.retain(|track| {
+                        if !message_ids.contains(&*track.data::<TrackData>()) {
+                            return true;
+                        }
+
+                        // Drop errors as only occurs if channel is dead.
+                        let _ = track.stop();
+                        false
+                    });
+                });
+            }
             IncomingMessage::ClearQueue => {
-                let Some(call) = calls.get_mut(&msg.guild_id) else {
+                let Some(call) = calls.get(&msg.guild_id) else {
                     continue;
                 };
 

@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs-unpatched.url = "github:NixOS/nixpkgs/nixos-unstable-small";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable-small";
     flake-utils.url = "github:numtide/flake-utils";
 
     tts-utils.url = "github:Discord-TTS/shared-workflows";
@@ -8,7 +8,7 @@
 
   outputs =
     {
-      nixpkgs-unpatched,
+      nixpkgs,
       flake-utils,
       tts-utils,
       ...
@@ -16,19 +16,6 @@
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgsUnpatched = import nixpkgs-unpatched { inherit system; };
-        nixpkgs = pkgsUnpatched.applyPatches {
-          name = "nixpkgs-patched";
-          src = nixpkgs-unpatched;
-          patches = [
-            # Fixes espeak-ng with mbrola
-            (pkgsUnpatched.fetchpatch2 {
-              url = "https://github.com/NixOS/nixpkgs/pull/511135.patch";
-              hash = "sha256-Y/KYc9ffXQ7wdNJuA86oXY3Fp2bMlmfVw21WUji66i4=";
-            })
-          ];
-        };
-
         lib = pkgs.lib;
         pkgs = import nixpkgs {
           inherit system;
@@ -57,7 +44,7 @@
           cargoLock = {
             lockFile = ./Cargo.lock;
             outputHashes = {
-              "serenity-0.12.5" = "sha256-YHi8i/F82kao8TsFXloIyXayg/65k/zI1C8i3LBidHA=";
+              "serenity-0.12.5" = "sha256-OS5ZM4kgLqJ9TrJHoGlxuhwbvzygqKm4kTLg+FMUBfg=";
               "songbird-0.6.0" = "sha256-6pPdpUU3W+WBRXQROFEac7Moa0crYWZ/TDfwYJhzvPc=";
             };
           };
